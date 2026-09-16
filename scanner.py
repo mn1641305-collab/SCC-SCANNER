@@ -31,7 +31,12 @@ import ta
 # CONFIG
 # ======================================================
 
-BINANCE_BASE = "https://api.binance.com"
+BINANCE_BASE = "https://data-api.binance.vision"  # public market-data-only
+                                                    # endpoint - not subject to
+                                                    # the geo-restriction that
+                                                    # blocks api.binance.com
+                                                    # from US-hosted CI runners
+                                                    # (e.g. GitHub Actions).
 INTERVAL = "1h"          # candle timeframe for the scan
 KLINES_LIMIT = 200       # history depth (enough for EMA50/ADX14/Chop14)
 TOP_N_BY_VOLUME = 150    # universe size -> liquid pairs only
@@ -232,7 +237,16 @@ def main():
     state = load_state()
     now = time.time()
 
-    symbols = get_top_symbols(TOP_N_BY_VOLUME)
+    try:
+        symbols = get_top_symbols(TOP_N_BY_VOLUME)
+    except Exception as e:
+        print(f"FATAL: could not reach Binance market-data API: {e}")
+        print("If this is an HTTP 451 error, the runner's IP is being "
+              "geo-blocked. This script already uses the "
+              "data-api.binance.vision endpoint to avoid that - if it's "
+              "still happening, Binance may have changed its rules again.")
+        raise
+
     print(f"Scanning {len(symbols)} symbols on {INTERVAL}...")
 
     results = []
@@ -271,5 +285,4 @@ def main():
     save_state(state)
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__
